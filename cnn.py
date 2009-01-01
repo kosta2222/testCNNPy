@@ -3,6 +3,9 @@ import traceback as t
 import sys
 
 from os import listdir
+"""
+S - stride шаг передвижения окна
+"""
 
 class CNN:
         def __init__(self):              
@@ -24,14 +27,13 @@ class CNN:
                 
                 # сигналы с CNN на FCNN
                 self.signals_conv=None
-
-                
                 
                 self.l_r=0.07
-
+                # в принципе это трех-мерный массив (20,1,784)
                 self.ko_data=[]
-
+                # в принципе это трех-мерный массив (20,28,28)
                 self.image_storage=[]
+                # в принципе это трех-мерный массив (20,1,2)
                 self.truth_storage=[]
                 
                 self.conv_params={'stride':2,'convolution':True,'center_w_l':(0,0)}
@@ -41,21 +43,35 @@ class CNN:
 
         def makeKoData(self,dir_:str):
                 files=listdir(dir_)
+                print('files',files)
                 byte_list:bytes=b''
-                im=[[]]
-                
+               
+                truth_relat:int=0 # индекс для one-hot кодирования
                 for file_nam in files:
+                        # получаем имя одного файла из списка
+                        # считываем его контент
                         with open(dir_+file_nam,'rb') as f:
                                 byte_list=f.read()
-                        im[0].clear()      
+                        im_single=[[]]
+                        truth_single=[[0,0]]
+                      
+                        truth_relat:int=int(file_nam[-5])
+                        print('truth relat',truth_relat)
+                        # one-hot кодирование 
+                        truth_single[0][truth_relat]=1.0
+                        print('file name',file_nam)
+                        print('truth single',truth_single)
                         for b in byte_list:
-                             im[0].append(float(b/255.0))
+                             im_single[0].append(float(b/255.0))
 
-                        self.ko_data.append(im)
+                        self.ko_data.append(im_single)
+                        self.truth_storage.append(truth_single)
+                print('truth storage',self.truth_storage)       
 
         def makeImageStorage(self):
             for input_image in self.ko_data:
-            	self.image_storage.append(np.reshape(input_image, (28, 28))) # (784,1) -> (28,28)
+               # print('input image shape',len(input_image[0]))    
+                self.image_storage.append(self.vector2matrix(input_image,(28,28))) # (784,1) -> (28,28)
 
 
 
@@ -69,45 +85,67 @@ class CNN:
                 coords_b=self.create_axis_indexes(size_axis[1],center_w_l[0])
                 return (coords_a,coords_b)
 
-        def conv_feed_get_a_l(self,a_0,#:matrix<R>
-                              w_l,#:matrix<R>
-                              conv_params:dict,
-                              ): #->matrix<R> (a_l)
-                indexes_a, indexes_b = self.create_indexes(size_axis=w_l.shape, center_w_l=self.conv_params['center_w_l'])
-                stride = self.conv_params['stride']
+        def make_convulat_or_corelat(self,matrix,#:matrix<R>
+                                     fraim,#:matrix<R>
+                                     coords_for_fraim:tuple,
+                                     S:int,
+                                     g_val_conv_or_corelat:int):#->matrix<R> matrix_res мы получили результат после процесса свертки
+              
+                matrix_height:int=matrix.shape[0]
+                matrix_width:int=matrix.shape[1]
+                indexes_a,indexes_b=coords_for_fraim
+
+               # print('indexes_a',indexes_a,'indexes_b',indexes_b)
+
+                matrix_res=np.zeros((1,1))
+
+                matrix_res_height=matrix_res.shape[0]
+                matrix_res_width=matrix_res.shape[1]
                 
-                a_l = np.zeros((1,1))
-               
-                if self.conv_params['convolution']:
-                        g = 1 
-                else:
-                        g = -1 
-                
-                for i in range(a_0.shape[0]): # 
-                        for j in range(a_0.shape[1]):
-                                demo = np.zeros([a_0.shape[0], a_0.shape[1]]) 
+                for i in range(matrix_height):
+                        for j in range(matrix_width):
                                 result = 0
                                 element_exists = False
                                 for a in indexes_a:
                                         for b in indexes_b:
                                                 
-                                                if i*stride - g*a >= 0 and j*stride - g*b >= 0 \
-                                                and i*stride - g*a < a_0.shape[0] and j*stride - g*b < a_0.shape[1]:
-                                                        result += a_0[i*stride - g*a][j*stride - g*b] * w_l[indexes_a.index(a)][indexes_b.index(b)]
-                                                        demo[i*stride - g*a][j*stride - g*b] = w_l[indexes_a.index(a)][indexes_b.index(b)]
+                                                if i*S - g_val_conv_or_corelat*a >= 0 and j*S - g_val_conv_or_corelat*b >= 0 \
+                                                and i*S - g_val_conv_or_corelat*a < matrix_height and j*S - g_val_conv_or_corelat*b < matrix_width:
+                                                        result += matrix[i*S - g_val_conv_or_corelat*a][j*S - g_val_conv_or_corelat*b] * fraim[indexes_a.index(a)][indexes_b.index(b)]
+                                                     
                                                         element_exists = True
                                
                                 if element_exists:
-                                        if i >= a_l.shape[0]:
+                                        if i >= matrix_res_height:
                                                 
-                                                a_l = np.vstack((a_l, np.zeros(a_l.shape[1])))
-                                        if j >= a_l.shape[1]:
+                                                matrix_res = np.vstack((matrix_res, np.zeros(matrix_res_width)))
+                                        if j >= matrix_res_width:
                                                 
-                                                a_l = np.hstack((a_l, np.zeros((a_l.shape[0],1))))
-                                        a_l[i][j] = result
+                                                matrix_res = np.hstack((matrix_res, np.zeros((matrix_res_height,1))))
+                                        matrix_res[i][j] = result
+                                        matrix_res_height=matrix_res.shape[0]
+                                        matrix_res_width=matrix_res.shape[1]
                                         
-                                        #print('i=' + str(i) + '; j=' + str(j) + '\n', demo)
-                return a_l
+                                       # print('matrix_res',matrix_res)
+                                        
+                                        
+                                        
+                return matrix_res              
+        
+
+        def conv_feed_get_a_l(self,a_0,#:matrix<R>
+                              w_l,#:matrix<R>
+                              conv_params:dict,
+                              ): #->matrix<R> (a_l)
+                indexes_a, indexes_b = self.create_indexes(size_axis=w_l.shape, center_w_l=conv_params['center_w_l'])
+                S = conv_params['stride']
+                
+                if conv_params['convolution']:
+                        g = 1 
+                else:
+                        g = -1 
+
+                return self.make_convulat_or_corelat(a_0,w_l,(indexes_a,indexes_b),S,g)        
                 
                         
         def conv_feed_get_a_l_act(self,a_l,#:matrix<R>
@@ -133,6 +171,10 @@ class CNN:
                 return 1.0
 
 
+        def vector2matrix(self,vector,#:matrix<R> (1,x) np.ndarray
+                          matrix_shape:tuple): #->matrix<R> np.ndarray
+                # функция разбиения вектора на матрицу
+               return np.reshape(vector,matrix_shape)
         
         def makeLayer(self,In:int,Out:int)->np.ndarray:
                 return np.random.normal(0,1,(In,Out))
@@ -174,10 +216,7 @@ class CNN:
              layerNew=layer+self.l_r*gradients*enteredVal.T
              return layerNew
 
-        def updMatrixCNNMaxpooling(self,layer:np.ndarray,gradients:np.ndarray)->np.ndarray:
-                layerNew=layer+self.l_r*gradients
-                return layerNew
-
+       
         def calcHidGradientsCNNMaxpooling(self,layer:np.ndarray,gradients:np.ndarray)->np.ndarray:
                 cost_gradients=np.dot(gradients,layer)
                 return cost_gradients
