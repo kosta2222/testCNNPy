@@ -50,14 +50,13 @@ class CNN:
         def relu(self,val:float):
                 if val<0:
                     return 0
-                else:
-                    return val
+                return val
 
         def derivate_relu(self,val:float):
                 if val<0:
                         return 0.001
-                else:
-                        return 1.0
+                
+                return 1.0
 
 
 
@@ -163,7 +162,7 @@ class CNN:
                return self.hidden2
         def mse(self,vec:np.ndarray)->float:
                 return np.square(vec).mean(axis=0)
-
+        # Один раз проганяем сигнал, один раз обновляем,показываем при этом средне-квадратичную ошибку 
         def train(self,X:np.ndarray,Y:np.ndarray)->float:
 
            cnn_out_res=self.feedForward(X)
@@ -181,7 +180,10 @@ class CNN:
            self.l_r=l_r
            ep=0
            while(ep<nEpochs):
-                   pass 
+                for X,Y in WholeMatrix:
+                        show_mse:float=self.train(X,Y)
+                        if ep%1000==0:
+                                print("Error mse:",show_mse)
                    
 
            
