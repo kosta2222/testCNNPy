@@ -11,33 +11,40 @@ class CNN:
                 self.d=3
                 self.S=1
                 self.P=0
-
+                # биас
                 self.b0=+1
 
                 np.random.seed(42)
-
-                self.X=np.random.randint(100,size=(self.W,self.W,self.d))
-
-                self.W0=np.random.randint(100,size=(self.F,self.F,self.d))
-
-                self.W1=np.random.randint(100,size=(self.F1,self.F1,self.d))
+                # тестировочный подвыборочны слой
+                self.X=np.random.normal(0,1,(self.W,self.W,self.d))
+                # окно для него
+                self.W0=np.random.normal(0,1,(self.F,self.F,self.d))
+                # окно для макс-пулинг
+                self.W1=np.random.normal(0,1,(self.F1,self.F1,self.d))
 
                 self.firstFCNLayer=self.makeLayer(3,4)
                 self.secondFCNLayer=self.makeLayer(2,3)
-
+                # неакивированное состояние первого слоя
                 self.e1=None
+                # неактивированное состояние второго слоя
                 self.e2=None
+                # тензор после свертки
                 self.res_conv=None
+                # его пропустили через активацию
                 self.res_conv_act=None
-
+                
+                # активировали первый слой
                 self.hidden1=None
+                # активировали второй слой
                 self.hidden2=None
-
+                
+                # тензор после макс-пулинга
                 self.res_maxpooling=None
+                # векторизировали тензор макс-пулинга
                 self.signals_conv=None
 
                 
-
+                # коэффициент обучения
                 self.l_r=0.07
 
         def relu(self,val:float):
@@ -108,7 +115,7 @@ class CNN:
 
                 return (cost,cost_activ)                
         def calcOutGradientsFCN(self,e:np.ndarray,_targets:np.ndarray)->np.ndarray:
-                gradients=np.zeros((e[0],1))
+                gradients=np.zeros((e.shape[0],1))
                 i=0
                 targets=_targets.T
                 for row in e:
@@ -123,7 +130,7 @@ class CNN:
                 i=0
                 for row in e_:
                         for elem in row:
-                                cost_gradients[0,i]=dot_gradients[0,i]*self.derivate_relu(elem)
+                                cost_gradients[0,i]=cost_gradients[0,i]*self.derivate_relu(elem)
                
                 return cur_gradients
         def updMatrixFCN(self,layer:np.ndarray,gradients:np.ndarray,enteredVal:np.ndarray)->np.ndarray:
@@ -145,7 +152,7 @@ class CNN:
                self.res_conv_act=self.Conv_act(self.res_conv)
                self.res_maxpooling=self.Maxpooling(self.res_conv_act,self.W1,2)
 
-               self.signals_conv=np.array([res_maxpooling.flatten()]).T
+               self.signals_conv=np.array([self.res_maxpooling.flatten()]).T
               # print(signals_conv)
 
                self.e1,self.hidden1=self.makeHidden(self.signals_conv,self.firstFCNLayer)
@@ -179,7 +186,7 @@ class CNN:
 
            
            
-   
+#==========================================   
 try:
     cnn=CNN()
     cnn.train(cnn.X,np.array([[0,1]]))
@@ -187,6 +194,7 @@ except Exception as e:
       # with open('log','w') as f: 
        #  t.print_exc(file=f)
        t.print_exc(file=sys.stdout)
+#=========================================       
 
 
        

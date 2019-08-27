@@ -1,2 +1,3 @@
 *.wpr
 __pycache__ 
+*~
