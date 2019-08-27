@@ -1,0 +1,8 @@
+Traceback (most recent call last):
+  File "cnn.py", line 160, in <module>
+    cnn.train(cnn.X,np.array([[0,1]]))
+  File "cnn.py", line 153, in train
+    self.layer2=self.updMatrix(self.layer2,grads2,self.hidden1)
+  File "cnn.py", line 128, in updMatrix
+    layer+= self.l_r*gradients*enteredVal
+ValueError: operands could not be broadcast together with shapes (2,3) (3,3) (2,3) 

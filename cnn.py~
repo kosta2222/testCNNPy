@@ -86,14 +86,14 @@ def makeHidden(signals:np.ndarray,weights:np.ndarray)->np.ndarray:
                 i+=1        
 
         return res_activ                
+def calcOutGradients(last_layer_res:np.ndarray,targets:np.ndarray)->np.ndarray:
+        gradients=np.zeros((last_layer_res.shape[0],1))
 
-def main():
+def feedForward(X:np.ndarray,layer1:np.ndarray,layer2:np.ndarray)->np.ndarray:
        res_conv=Output1(X,W0)
        res_output=Output2(res_conv)
        res_maxpooling=Maxpooling(res_output,W1,2)
-       layer1=makeLayer(3,4)
-       layer2=makeLayer(2,3)
-
+     
        signals_conv=np.array([res_maxpooling.flatten()]).T
        print(signals_conv)
 
@@ -105,7 +105,12 @@ def main():
        return res_layer2
 
         
-       
+def train(X:np.ndarray,Y:np.ndarray):
+   layer1=makeLayer(3,4)
+   layer2=makeLayer(2,3)
+
+   cnn_out_res=feedForward(X,layer1,layer2)
+   
 try:
       print(main())
        

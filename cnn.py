@@ -1,121 +1,192 @@
 import numpy as np
 import traceback as t
+import sys
+
+class CNN:
+        def __init__(self):
+                self.F=3
+                self.F1=2
+                self.W=7
+
+                self.d=3
+                self.S=1
+                self.P=0
+
+                self.b0=+1
+
+                np.random.seed(42)
+
+                self.X=np.random.randint(100,size=(self.W,self.W,self.d))
+
+                self.W0=np.random.randint(100,size=(self.F,self.F,self.d))
+
+                self.W1=np.random.randint(100,size=(self.F1,self.F1,self.d))
+
+                self.firstFCNLayer=self.makeLayer(3,4)
+                self.secondFCNLayer=self.makeLayer(2,3)
+
+                self.e1=None
+                self.e2=None
+                self.res_conv=None
+                self.res_conv_act=None
+
+                self.hidden1=None
+                self.hidden2=None
+
+                self.res_maxpooling=None
+                self.signals_conv=None
+
+                
+
+                self.l_r=0.07
+
+        def relu(self,val:float):
+                if val<0:
+                    return 0
+                else:
+                    return val
+
+        def derivate_relu(self,val:float):
+                if val<0:
+                        return 0.001
+                else:
+                        return 1.0
 
 
-F=3
-F1=2
-W=7
-    
-d=3
-S=1
-P=0
-    
-b0=+1
-    
-np.random.seed(42)
-    
-X=np.random.randint(100,size=(W,W,d))
-    
-W0=np.random.randint(100,size=(F,F,d))
 
-W1=np.random.randint(100,size=(F1,F1,d))
-    
-def relu(val:float):
-        if val<0:
-            return 0
-        else:
-            return val
-    
-def derivate_relu(val:float):
-        if val<0:
-                return 0.001
-        else:
-                return 1.0
-        
-        
-    
-def Output1(X:np.ndarray,W0:np.ndarray)->np.ndarray:
-       W=X.shape[0]
-       F=W0.shape[0]
-       P=0
-       
-       OutV=int((W-F+2*P)/S+1)
-       OutDepth=1
-       
-       V1=np.zeros((OutV,OutV,OutDepth))
-       
-       for downY in range(OutV):
-           for acrossX in range(OutV):
-               V1[downY,acrossX,0]=np.sum(X[S*downY:S*downY+F,S*acrossX:S*acrossX+F,:]*W0)+b0
+        def Conv(self,X:np.ndarray,W0:np.ndarray)->np.ndarray:
+               W=X.shape[0]
+               F=W0.shape[0]
+               S=1
+               P=0
+
+               OutV=int((W-F+2*P)/S+1)
+               OutDepth=1
+
+               V1=np.zeros((OutV,OutV,OutDepth))
+
+               for downY in range(OutV):
+                   for acrossX in range(OutV):
+                       V1[downY,acrossX,0]=np.sum(X[S*downY:S*downY+F,S*acrossX:S*acrossX+F,:]*W0)+self.b0
+
+               return V1
+
+        def Conv_act(self,V1:np.ndarray)->np.ndarray:
+               V2=np.zeros((V1.shape[0],V1.shape[0],V1.shape[2]))
+
+               for row in range(V1.shape[0]):
+                   for elem in range(V1.shape[1]):
+                       V2[row][elem][0]=self.relu(V1[row][elem][0])
+               return V2
+
+        def Maxpooling(self,X1:np.ndarray,W1:np.ndarray,S)->np.ndarray:
+               W=X1.shape[0]
+               F1=W1.shape[0]
+               P=0
+               OutV=int((W-F1+2*P)/S+1)
+               OutDepth=1
+
+               V3=np.zeros((OutV,OutV,OutDepth))
+
+               for downY in range(OutV):
+                   for acrossX in range(OutV):
+                       V3[downY,acrossX,0]=np.max(X1[S*downY:S*downY+F1,S*acrossX:S*acrossX+F1,:])
+               return V3
+
+        def makeLayer(self,In:int,Out:int)->np.ndarray:
+                return np.random.normal(0,1,(In,Out))
+
+        def makeHidden(self,signals:np.ndarray,weights:np.ndarray)->(np.ndarray,np.ndarray):
+                cost:np.ndarray=np.dot(weights,signals)
+                cost_activ=np.zeros((cost.shape[0],cost.shape[1]))
+
+                i=0
+                for row in cost_activ:
+                        for elem in row:
+                                cost_activ[i,0]=self.relu(elem)
+                        i+=1        
+
+                return (cost,cost_activ)                
+        def calcOutGradientsFCN(self,e:np.ndarray,_targets:np.ndarray)->np.ndarray:
+                gradients=np.zeros((e[0],1))
+                i=0
+                targets=_targets.T
+                for row in e:
+                        for elem in row:
+                               
+                              gradients[i,0]=(targets[i,0]-elem)* self.derivate_relu(elem)
+                        i+=1
+                return gradients.T
+        def calcHidGradientsFCN(self,layer:np.ndarray,e_:np.ndarray,gradients:np.ndarray)->np.ndarray:
+                cur_gradients=np.zeros((1,layer.shape[1]))
+                cost_gradients=np.dot(gradients,layer)
+                i=0
+                for row in e_:
+                        for elem in row:
+                                cost_gradients[0,i]=dot_gradients[0,i]*self.derivate_relu(elem)
                
-       return V1
-   
-def Output2(V1:np.ndarray)->np.ndarray:
-       V2=np.zeros((V1.shape[0],V1.shape[0],V1.shape[2]))
-       
-       for row in range(V1.shape[0]):
-           for elem in range(V1.shape[1]):
-               V2[row][elem][0]=relu(V1[row][elem][0])
-       return V2
-   
-def Maxpooling(X1:np.ndarray,W1:np.ndarray,S)->np.ndarray:
-       W=X1.shape[0]
-       F1=W1.shape[0]
-       P=0
-       OutV=int((W-F1+2*P)/S+1)
-       OutDepth=1
+                return cur_gradients
+        def updMatrixFCN(self,layer:np.ndarray,gradients:np.ndarray,enteredVal:np.ndarray)->np.ndarray:
+             print("layer shape",layer.shape,"gradients",gradients.shape,"enteredval",enteredVal.shape)
+             layerNew=layer+self.l_r*gradients*enteredVal.T
+             return layerNew
 
-       V3=np.zeros((OutV,OutV,OutDepth))
+        def updMatrixCNNMaxpooling(self,layer:np.ndarray,gradients:np.ndarray)->np.ndarray:
+                layerNew=layer+self.l_r*gradients
+                return layerNew
 
-       for downY in range(OutV):
-           for acrossX in range(OutV):
-               V3[downY,acrossX,0]=np.max(X1[S*downY:S*downY+F1,S*acrossX:S*acrossX+F1,:])
-       return V3
+        def calcHidGradientsCNNMaxpooling(self,layer:np.ndarray,gradients:np.ndarray)->np.ndarray:
+                cost_gradients=np.dot(gradients,layer)
+                return cost_gradients
+                
 
-def makeLayer(In:int,Out:int)->np.ndarray:
-        return np.random.normal(0,1,(In,Out))
+        def feedForward(self,X:np.ndarray)->np.ndarray:
+               self.res_conv=self.Conv(self.X,self.W0)
+               self.res_conv_act=self.Conv_act(self.res_conv)
+               self.res_maxpooling=self.Maxpooling(self.res_conv_act,self.W1,2)
 
-def makeHidden(signals:np.ndarray,weights:np.ndarray)->np.ndarray:
-        res:npndarray=np.dot(weights,signals)
-        res_activ=np.zeros((res.shape[0],res.shape[1]))
+               self.signals_conv=np.array([res_maxpooling.flatten()]).T
+              # print(signals_conv)
 
-        i=0
-        for row in res:
-                for elem in row:
-                        res_activ[i,0]=relu(elem)
-                i+=1        
+               self.e1,self.hidden1=self.makeHidden(self.signals_conv,self.firstFCNLayer)
+               #print(res_layer1)
+               self.e2,self.hidden2=self.makeHidden(self.hidden1,self.secondFCNLayer)
 
-        return res_activ                
-def calcOutGradients(last_layer_res:np.ndarray,targets:np.ndarray)->np.ndarray:
-        gradients=np.zeros((last_layer_res.shape[0],1))
+              # res_maxpooling=Maxpooling(res_maxpooling,W1,2)
+               return self.hidden2
+        def mse(self,vec:np.ndarray)->float:
+                return np.square(vec).mean(axis=0)
 
-def feedForward(X:np.ndarray,layer1:np.ndarray,layer2:np.ndarray)->np.ndarray:
-       res_conv=Output1(X,W0)
-       res_output=Output2(res_conv)
-       res_maxpooling=Maxpooling(res_output,W1,2)
-     
-       signals_conv=np.array([res_maxpooling.flatten()]).T
-       print(signals_conv)
+        def train(self,X:np.ndarray,Y:np.ndarray)->float:
 
-       res_layer1=makeHidden(signals_conv,layer1)
-       print(res_layer1)
-       res_layer2=makeHidden(res_layer1,layer2)
-                             
-      # res_maxpooling=Maxpooling(res_maxpooling,W1,2)
-       return res_layer2
+           cnn_out_res=self.feedForward(X)
+           out_grads=self.calcOutGradientsFCN(cnn_out_res,Y)
+           grads2=self.calcHidGradientsFCN(self.secondFCNLayer,self.e2,out_grads)
+           self.secondFCNLayer=self.updMatrixFCN(self.secondFCNLayer,grads2,self.hidden1)
+           grads1=self.calcHidGradientsFCN(self.firstFCNLayer,self.e1,grads2)
+           self.firstFCNLayer=self.updMatrixFCN(self.firstFCNLayer,grads1,self.signals_conv)
 
-        
-def train(X:np.ndarray,Y:np.ndarray):
-   layer1=makeLayer(3,4)
-   layer2=makeLayer(2,3)
+           self.res_maxpooling:np.ndarray=self.updMatrixCNNMaxpooling(self.res_maxpooling,grads1)
 
-   cnn_out_res=feedForward(X,layer1,layer2)
+           return self.mse(Y-cnn_out_res)
+
+        def fit(self,WholeMatrix:np.ndarray,nEpochs:int,l_r:float)->None:
+           self.l_r=l_r
+           ep=0
+           while(ep<nEpochs):
+                   pass 
+                   
+
+           
+           
    
 try:
-      print(main())
-       
+    cnn=CNN()
+    cnn.train(cnn.X,np.array([[0,1]]))
 except Exception as e:
-       t.format_exc(e)
+      # with open('log','w') as f: 
+       #  t.print_exc(file=f)
+       t.print_exc(file=sys.stdout)
 
 
        
