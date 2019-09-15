@@ -107,7 +107,7 @@ class CNN:
                        V3[downY,acrossX,0]=np.max(X1[S*downY:S*downY+F1,S*acrossX:S*acrossX+F1,:])
                return V3
         """
-        Заинициализировали 1 слой CNN сети
+        Заинициализировали 1 слой FCNN сети
         """  
         def makeLayer(self,In:int,Out:int)->np.ndarray:
                 return np.random.normal(0,1,(In,Out))
