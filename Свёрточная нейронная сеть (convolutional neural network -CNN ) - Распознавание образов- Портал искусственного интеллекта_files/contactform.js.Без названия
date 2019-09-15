@@ -1,0 +1,143 @@
+function SendPost($formid, callback_ok,callback_error,callback_beforesend,showerrors)
+{
+    	$formid.submit(function(event)
+	{
+        $formid.find("input, textarea").removeClass('error');
+       	
+        if (typeof(callback_beforesend) == "function") callback_beforesend();
+        $formid.find(".messages").html('').fadeOut( function(){
+		$.ajax(
+		{
+			url: $formid.attr('action'),
+			type: "POST",
+			data: $formid.serialize(),
+			success: function(dt)
+			{
+			 //console.log(dt);
+             
+                 if (typeof(dt.error)=="undefined"){callback_ok(""); return;}
+                 
+		         if (dt==''  && (typeof(callback_ok) == "function")) {callback_ok(dt); return;}
+                // console.log(dt);
+              if(dt.error==0)   
+             	{
+                  if (typeof(callback_ok) == "function") callback_ok(dt);
+             	} 
+                else
+                {
+                  
+    	    	$formid.find("input, textarea").each(
+    				function(key, el)
+    				{
+    					if ($.inArray($(el).attr('name'), dt.data) > -1) $(el).addClass('error');
+    				});
+                    
+                
+                 if(showerrors)   
+                  {
+                    if(  Array.isArray(dt.msg))
+    			
+                	$(dt.msg).each(
+    				function(key, el)
+    				{
+    			      if(el!='')	$formid.find(".messages").append("<div>" + el + "</div>");
+    				});
+                  else  if(dt.msg!='') 	$formid.find(".messages").append("<div>" + dt.msg + "</div>");
+                  }
+                  
+                  
+                    
+                    if (typeof(callback_error) == "function") callback_error(dt);
+                  $formid.find(".messages").fadeIn(function(){ $formid.effect( "shake", {times:3,distance:15,direction :"left"}, 300 ); });
+                }    
+                
+                
+                
+			},
+		}); // ajax
+       } ); //fadeOut
+        
+		event.preventDefault();
+	});
+}
+
+
+
+
+
+$(document).ready(function()
+{
+    
+    
+	$("#contactform input, #contactform textarea").change(function()
+	{
+		$("#contactform input, #contactform textarea").removeClass('error');
+		$("#contactform .messages").html('');
+	});
+
+ SendPost($("#contactform"),function(dt){ 
+    $("#contactform").fadeOut();    
+    $("#contactform").parents('.form').html( $("<div>" + dt.msg + "</div>").hide().fadeIn() );
+},null,null,true);
+
+ 
+ $(".clarmform").click(function(){
+    $("#clarmform").slideDown();
+    return false;
+ });
+ 
+  SendPost($("#clarmform"),function(dt){ 
+    $("#clarmform").fadeOut();    
+    $("#clarmform").parents('.form-clarm').html( $("<div>" + dt.msg + "</div>").hide().fadeIn() );
+},null,null,true);
+
+
+
+ 
+
+SendPost($("#fm_reg"), function(){
+    $("#fm_reg").parents('.begin-now_form').addClass('disabled');
+    $('#fm_reg input').attr('disabled','disabled').removeClass('active')
+    $('#fm_auth input').removeAttr('disabled').addClass('active');
+    $("#fm_auth").parents('.begin-now_form').removeClass('disabled');
+      if (typeof(window.sliderReg)=="object" && typeof(window.sliderReg.goToNextSlide)=="function"   )window.sliderReg.goToNextSlide();     
+}
+,null,
+function()
+{
+    $("#fm_reg input[name=password_confirmation]").val($("#fm_reg input[name=password]").val());
+},
+true);
+SendPost($("#fm_auth"), function(){  location.href='/lists'},null,null,true);
+
+
+
+
+
+
+        
+        
+SendPost($("#fm_reg2"),function(){	
+    $("#fm_reg2").hide();
+    $("#fm_check_sms_token2").show(); 
+    $('#sign-in-link').click();
+    }, null,function(){
+        $("#fm_reg2 input[name=password_confirmation]").val($("#fm_reg2 input[name=password]").val());
+    }
+, true);
+
+SendPost($("#sign-in-form2"), function(){  location.href='/'},null,null,true);
+
+
+
+SendPost($("#register_reg"), function(){
+    location.href='/';
+}
+,null,
+function()
+{
+    $("#register_reg input[name=password_confirmation]").val($("#register_reg input[name=password]").val());
+},
+true);
+
+});
