@@ -59,7 +59,10 @@ class CNN:
                 return 1.0
 
 
-
+        """
+        Уменьшаем размер матрицы сигналов(это отдаем),слоя к которому мы применяем
+        окошко весов-так мы выделяем признаки
+        """
         def Conv(self,X:np.ndarray,W0:np.ndarray)->np.ndarray:
                W=X.shape[0]
                F=W0.shape[0]
@@ -76,7 +79,9 @@ class CNN:
                        V1[downY,acrossX,0]=np.sum(X[S*downY:S*downY+F,S*acrossX:S*acrossX+F,:]*W0)+self.b0
 
                return V1
-
+        """
+        Выясняем активированное состояние нейронов сверточного слоя(отдаем)
+        """      
         def Conv_act(self,V1:np.ndarray)->np.ndarray:
                V2=np.zeros((V1.shape[0],V1.shape[0],V1.shape[2]))
 
@@ -84,7 +89,10 @@ class CNN:
                    for elem in range(V1.shape[1]):
                        V2[row][elem][0]=self.relu(V1[row][elem][0])
                return V2
-
+        """
+        Применяем другое окошко для макс-пулинга чтобы пройтись по
+        матрице после свертки/активации(отдаем)
+        """  
         def Maxpooling(self,X1:np.ndarray,W1:np.ndarray,S)->np.ndarray:
                W=X1.shape[0]
                F1=W1.shape[0]
@@ -98,10 +106,15 @@ class CNN:
                    for acrossX in range(OutV):
                        V3[downY,acrossX,0]=np.max(X1[S*downY:S*downY+F1,S*acrossX:S*acrossX+F1,:])
                return V3
-
+        """
+        Заинициализировали 1 слой CNN сети
+        """  
         def makeLayer(self,In:int,Out:int)->np.ndarray:
                 return np.random.normal(0,1,(In,Out))
-
+        """
+        Нужно для прямого распространения,взвешиваем сигналы на слое,
+        отдаем взвешинные сигналы и их же пропущенных через активационную функцию
+        """ 
         def makeHidden(self,signals:np.ndarray,weights:np.ndarray)->(np.ndarray,np.ndarray):
                 cost:np.ndarray=np.dot(weights,signals)
                 cost_activ=np.zeros((cost.shape[0],cost.shape[1]))
@@ -167,9 +180,12 @@ class CNN:
 
            cnn_out_res=self.feedForward(X)
            out_grads=self.calcOutGradientsFCN(cnn_out_res,Y)
+           print("out grads:",out_grads.shape)
            grads2=self.calcHidGradientsFCN(self.secondFCNLayer,self.e2,out_grads)
+           print("grads on layer 2:",grads2.shape)
            self.secondFCNLayer=self.updMatrixFCN(self.secondFCNLayer,grads2,self.hidden1)
            grads1=self.calcHidGradientsFCN(self.firstFCNLayer,self.e1,grads2)
+           print("grads on layer 1:",grads1.shape)
            self.firstFCNLayer=self.updMatrixFCN(self.firstFCNLayer,grads1,self.signals_conv)
 
            self.res_maxpooling:np.ndarray=self.updMatrixCNNMaxpooling(self.res_maxpooling,grads1)
