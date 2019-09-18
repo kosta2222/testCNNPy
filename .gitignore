@@ -1,3 +1,4 @@
 *.wpr
 __pycache__ 
 *~
+img/

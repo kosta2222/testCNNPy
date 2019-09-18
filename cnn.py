@@ -2,6 +2,8 @@ import numpy as np
 import traceback as t
 import sys
 
+from os import listdir
+
 class CNN:
         def __init__(self):
                 self.F=3
@@ -47,6 +49,79 @@ class CNN:
                 # коэффициент обучения
                 self.l_r=0.07
 
+                self.ko_data=[]
+
+                self.image_starage=[]
+                self.truth_storage=[]
+
+        def makeKoData(dir_:str):
+                files=listdir(_dir)
+                byte_list:bytes=b''
+                im=[[]]
+                
+                for file_nam in files:
+                        with open(dir_+file_nam) as f:
+                                byte_list=f.read()
+         
+                        for b in byte_list:
+                             im[0].append(float(b/255))
+
+                        self.ko_data.append(im)     
+
+
+
+        def create_axis_indexes(self,size_axis:int,center_w_l:int)->list:
+                coords=[]
+                for i in range(-center_w_l,size_axis-center_w_l):
+                        coords.append(i)
+                return coords        
+        def create_indexes(self,size_axis:tuple,centre_w_l:tuple)->tuple:
+                coords_a=self.create_axis_indexes(size_axis[0],center_w_l[0])
+                coords_b=self.create_axis_indexes(size_axis[1],center_w_l[0])
+                return (coords_a,coords_b)
+
+        def conv_feed_get_a_l(self,a_0,#:matrix<R>
+                              w_l,#:matrix<R>
+                              conv_params:dict,
+                              ): #->matrix<R> (a_l)
+                indexes_a, indexes_b = create_indexes(size_axis=w_l.shape, center_w_l=conv_params['center_w_l'])
+                stride = conv_params['stride']
+                # матрица выхода будет расширяться по мере добавления новых элементов
+                a_l = np.zeros((1,1))
+                # в зависимости от типа операции меняется основная формула функции
+                if conv_params['convolution']:
+                        g = 1 # операция конволюции
+                else:
+                        g = -1 # операция корреляции
+                # итерация по i и j входной матрицы a_0 из предположения, что размерность выходной матрицы a_l будет такой же
+                for i in range(a_0.shape[0]): # 
+                        for j in range(a_0.shape[1]):
+                                demo = np.zeros([a_0.shape[0], a_0.shape[1]]) # матрица для демонстрации конволюции
+                                result = 0
+                                element_exists = False
+                                for a in indexes_a:
+                                        for b in indexes_b:
+                                                # проверка, чтобы значения индексов не выходили за границы
+                                                if i*stride - g*a >= 0 and j*stride - g*b >= 0 \
+                                                and i*stride - g*a < a_0.shape[0] and j*stride - g*b < a_0.shape[1]:
+                                                        result += a_0[i*stride - g*a][j*stride - g*b] * w_l[indexes_a.index(a)][indexes_b.index(b)] # перевод индексов в "нормальные" для извлечения элементов из матрицы w_l
+                                                        demo[i*stride - g*a][j*stride - g*b] = w_l[indexes_a.index(a)][indexes_b.index(b)]
+                                                        element_exists = True
+                                # запись полученных результатов только в том случае, если для данных i и j были произведены вычисления
+                                if element_exists:
+                                        if i >= a_l.shape[0]:
+                                                # добавление строки, если не существует
+                                                a_l = np.vstack((a_l, np.zeros(a_l.shape[1])))
+                                        if j >= a_l.shape[1]:
+                                                # добавление столбца, если не существует
+                                                a_l = np.hstack((a_l, np.zeros((a_l.shape[0],1))))
+                                        a_l[i][j] = result
+                                        # вывод матрицы demo для отслеживания хода свертки
+                                        # print('i=' + str(i) + '; j=' + str(j) + '\n', demo)
+                return a_l
+                
+                        
+                               
         def relu(self,val:float):
                 if val<0:
                     return 0
@@ -165,14 +240,13 @@ class CNN:
                self.res_maxpooling=self.Maxpooling(self.res_conv_act,self.W1,2)
 
                self.signals_conv=np.array([self.res_maxpooling.flatten()]).T
-              # print(signals_conv)
-
+             
                self.e1,self.hidden1=self.makeHidden(self.signals_conv,self.firstFCNLayer)
-               #print(res_layer1)
                self.e2,self.hidden2=self.makeHidden(self.hidden1,self.secondFCNLayer)
-
-              # res_maxpooling=Maxpooling(res_maxpooling,W1,2)
                return self.hidden2
+        """
+        Средне-квадратичная ошибка
+        """
         def mse(self,vec:np.ndarray)->float:
                 return np.square(vec).mean(axis=0)
         # Один раз проганяем сигнал, один раз обновляем,показываем при этом средне-квадратичную ошибку 
