@@ -56,24 +56,19 @@ class CNN:
                         truth_single=[[0,0]]
                       
                         truth_relat:int=int(file_nam[-5])
-                        print('truth relat',truth_relat)
                         # one-hot кодирование 
                         truth_single[0][truth_relat]=1.0
-                        print('file name',file_nam)
-                        print('truth single',truth_single)
+                       
                         for b in byte_list:
                              im_single[0].append(float(b/255.0))
 
                         self.ko_data.append(im_single)
                         self.truth_storage.append(truth_single)
-                print('truth storage',self.truth_storage)       
+              
 
         def makeImageStorage(self):
             for input_image in self.ko_data:
-               # print('input image shape',len(input_image[0]))    
                 self.image_storage.append(self.vector2matrix(input_image,(28,28))) # (784,1) -> (28,28)
-
-
 
         def create_axis_indexes(self,size_axis:int,center_w_l:int)->list:
                 coords=[]
@@ -95,8 +90,7 @@ class CNN:
                 matrix_width:int=matrix.shape[1]
                 indexes_a,indexes_b=coords_for_fraim
 
-               # print('indexes_a',indexes_a,'indexes_b',indexes_b)
-
+              
                 matrix_res=np.zeros((1,1))
 
                 matrix_res_height=matrix_res.shape[0]
@@ -209,8 +203,9 @@ class CNN:
                 for row in e_:
                         for elem in row:
                                 cost_gradients[0,i]=cost_gradients[0,i]*self.derivate_relu(elem)
+                        i+=1        
                
-                return cur_gradients
+                return cost_gradients
         def updMatrixFCN(self,layer:np.ndarray,gradients:np.ndarray,enteredVal:np.ndarray)->np.ndarray:
              print("layer shape",layer.shape,"gradients",gradients.shape,"enteredval",enteredVal.shape)
              layerNew=layer+self.l_r*gradients*enteredVal.T
@@ -242,25 +237,35 @@ class CNN:
         def train(self,X:np.ndarray,Y:np.ndarray)->float:
 
            cnn_out_res=self.feedForward(X)
+           print('cnn_out_res',cnn_out_res)
            out_grads=self.calcOutGradientsFCN(cnn_out_res,Y)
-           print("out grads:",out_grads.shape)
+           print("out grads:",out_grads)
            grads2=self.calcHidGradientsFCN(self.secondFCNLayer,self.e2,out_grads)
-           print("grads on layer 2:",grads2.shape)
+           
+          # print("grads on layer 2:",grads2)
            self.secondFCNLayer=self.updMatrixFCN(self.secondFCNLayer,grads2,self.hidden1)
            grads1=self.calcHidGradientsFCN(self.firstFCNLayer,self.e1,grads2)
-           print("grads on layer 1:",grads1.shape)
+          # print("grads on layer 1:",grads1.shape)
            self.firstFCNLayer=self.updMatrixFCN(self.firstFCNLayer,grads1,self.signals_conv)
+          # print('grads1',grads1)
+           window_to_backprop_conv=\
+           self.vector2matrix(grads1,(15,15))
+           print('wind to backprop',window_to_backprop_conv)
            return self.mse(Y-cnn_out_res)
 
         def fit(self,nEpochs:int,l_r:float)->None:
           
-                self.l_r=l_r
+                #self.l_r=l_r
                 #ep=0
                 #while(ep<nEpochs):
-                for X in np.array(self.image_storage):
-                        show_mse:float=self.train(X,np.array([[1.0,0.0]])) # Y для теста
+                   for i in range(20):
+                        cur_img=np.array(self.image_storage[i])
+                        cur_truth=np.array(self.truth_storage[i])
+               
+                        show_mse:float=self.train(cur_img,cur_truth) # Y для теста
                         #if ep%1000==0:
                                 #print("Error mse:",show_mse)
+                   #ep+=1             
                    
 
            
