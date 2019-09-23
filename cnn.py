@@ -32,7 +32,7 @@ class CNN:
                 self.a_l_act=None
 
                 self.grads_on_fraim_conv=None
-                # hidden1 and hidden2 -  here we activate layer1 neurons row
+                # hidden1 and hidden2 -  here we activate layer neurons row
                 self.hidden1=None
                
                 self.hidden2=None
@@ -65,7 +65,6 @@ class CNN:
 
         def makeCircleAndSquaresImgData(self,dir_:str):
                 files=listdir(dir_)
-                print('files',files)
                 byte_list:bytes=b''
                
                 truth_relat:int=0 # index for one-hot encoding
@@ -225,7 +224,6 @@ class CNN:
                
                 return cost_gradients
         def updMatrixFCN(self,layer:np.ndarray,gradients:np.ndarray,enteredVal:np.ndarray)->np.ndarray:
-             print("layer shape",layer.shape,"gradients",gradients.shape,"enteredval",enteredVal.shape)
              layerNew=layer+self.l_r*gradients*enteredVal.T
              return layerNew
 
@@ -275,7 +273,7 @@ class CNN:
          
            self.grads_on_fraim_conv= \
            self.make_convulat_or_corelat(self.matr_to_backprop_conv,self.w_l,(self.indexes_a,self.indexes_b),1,1)
-           print("grads on fraim conv shape",np.array(self.grads_on_fraim_conv).shape)
+          
            self.a_l=self.updMatrixCNN(self.a_l,self.grads_on_fraim_conv)
            return self.mse(Y.T-cnn_out_res)
 
@@ -287,14 +285,14 @@ class CNN:
                    for i in range(20):
                         cur_img=np.array(self.image_storage[i])
                         cur_truth=np.array(self.truth_storage[i])
-                        print('cur truth',cur_truth)
                
                         show_mse:float=self.train(cur_img,cur_truth) 
                         if ep%10==0:
                                 print('--------------------')
                                 print("Error mse:",show_mse)
                                 print('--------------------')
-                   ep+=1             
+                   ep+=1
+                print("grads on fraim conv shape",np.array(self.grads_on_fraim_conv).shape)
                    
 
            
