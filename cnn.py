@@ -19,11 +19,14 @@ class CNN:
                 self.a_l=None
                 # 
                 self.a_l_act=None
-                
+
+                self.grads_on_fraim_conv=None
                 # 
                 self.hidden1=None
                 # 
                 self.hidden2=None
+
+
                 
                 # сигналы с CNN на FCNN
                 self.signals_conv=None
@@ -35,11 +38,15 @@ class CNN:
                 self.image_storage=[]
                 # в принципе это трех-мерный массив (20,1,2)
                 self.truth_storage=[]
+
+                self.matr_to_backprop_conv=None
                 
                 self.conv_params={'stride':2,'convolution':True,'center_w_l':(0,0)}
                 self.w_l=np.array([[-1,-1,-1],
                                    [-1,8,-1],
-                                   [-1,-1,-1]]) 
+                                   [-1,-1,-1]])
+                self.indexes_a, self.indexes_b = self.create_indexes(size_axis=self.w_l.shape, center_w_l=self.conv_params['center_w_l'])
+
 
         def makeKoData(self,dir_:str):
                 files=listdir(dir_)
@@ -131,7 +138,6 @@ class CNN:
                               w_l,#:matrix<R>
                               conv_params:dict,
                               ): #->matrix<R> (a_l)
-                indexes_a, indexes_b = self.create_indexes(size_axis=w_l.shape, center_w_l=conv_params['center_w_l'])
                 S = conv_params['stride']
                 
                 if conv_params['convolution']:
@@ -139,7 +145,7 @@ class CNN:
                 else:
                         g = -1 
 
-                return self.make_convulat_or_corelat(a_0,w_l,(indexes_a,indexes_b),S,g)        
+                return self.make_convulat_or_corelat(a_0,w_l,(self.indexes_a,self.indexes_b),S,g)        
                 
                         
         def conv_feed_get_a_l_act(self,a_l,#:matrix<R>
@@ -211,6 +217,16 @@ class CNN:
              layerNew=layer+self.l_r*gradients*enteredVal.T
              return layerNew
 
+        def updMatrixCNN(self,matrix,#:matrix<R>
+                              delta_matrix #:matrix<R>
+                         ): #->matrix<R> new have updated
+
+                newMatr=np.zeros((matrix.shape[0],matrix.shape[1]))
+
+                newMatr=matrix+delta_matrix
+
+                return newMatr
+
        
         def calcHidGradientsCNNMaxpooling(self,layer:np.ndarray,gradients:np.ndarray)->np.ndarray:
                 cost_gradients=np.dot(gradients,layer)
@@ -238,6 +254,7 @@ class CNN:
 
            cnn_out_res=self.feedForward(X)
            print('cnn_out_res',cnn_out_res)
+           print('cnn out res type',type(cnn_out_res))
            out_grads=self.calcOutGradientsFCN(cnn_out_res,Y)
            print("out grads:",out_grads)
            grads2=self.calcHidGradientsFCN(self.secondFCNLayer,self.e2,out_grads)
@@ -248,24 +265,31 @@ class CNN:
           # print("grads on layer 1:",grads1.shape)
            self.firstFCNLayer=self.updMatrixFCN(self.firstFCNLayer,grads1,self.signals_conv)
           # print('grads1',grads1)
-           window_to_backprop_conv=\
+           self.matr_to_backprop_conv=\
            self.vector2matrix(grads1,(15,15))
-           print('wind to backprop',window_to_backprop_conv)
-           return self.mse(Y-cnn_out_res)
+          # print('matr to backprop conv',matr_to_backprop_conv)
+           self.grads_on_fraim_conv= \
+           self.make_convulat_or_corelat(self.matr_to_backprop_conv,self.w_l,(self.indexes_a,self.indexes_b),1,1)
+           print("grads on fraim conv shape",np.array(self.grads_on_fraim_conv).shape)
+           self.a_l=self.updMatrixCNN(self.a_l,self.grads_on_fraim_conv)
+           return self.mse(Y.T-cnn_out_res)
 
         def fit(self,nEpochs:int,l_r:float)->None:
           
-                #self.l_r=l_r
-                #ep=0
-                #while(ep<nEpochs):
+                self.l_r=l_r
+                ep=0
+                while(ep<nEpochs):
                    for i in range(20):
                         cur_img=np.array(self.image_storage[i])
                         cur_truth=np.array(self.truth_storage[i])
+                        print('cur truth',cur_truth)
                
                         show_mse:float=self.train(cur_img,cur_truth) # Y для теста
-                        #if ep%1000==0:
-                                #print("Error mse:",show_mse)
-                   #ep+=1             
+                        if ep%10==0:
+                                print('--------------------')
+                                print("Error mse:",show_mse)
+                                print('--------------------')
+                   ep+=1             
                    
 
            
@@ -275,7 +299,7 @@ try:
     cnn=CNN()
     cnn.makeKoData('./img/')
     cnn.makeImageStorage()
-    cnn.fit(12,0.07)
+    cnn.fit(30,0.07)
 except Exception as e:
      
        t.print_exc(file=sys.stdout)
