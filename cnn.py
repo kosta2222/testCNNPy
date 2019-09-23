@@ -12,10 +12,10 @@ circle_1_0.ari,square_10_1.ari
 The last number is the class of figure
  
 Denote.
-a_0 - is singe matrix where we write input image to convulate it with...
-w_l - matrix and to get result as...
-a_l - matrix, which we activate with relu function and get
-a_l_act - matrix. 
+input_img - is singe matrix where we write input image to convulate it with...
+patch_for_conv - matrix and to get result as...
+featured_map - matrix, which we activate with relu function and get
+featured_map_act - matrix. 
 """
 
 class CNN:
@@ -27,11 +27,11 @@ class CNN:
                 
                 self.e2=None
                 # here we write result of conv process 
-                self.a_l=None
-                # here we activate matrix a_l
-                self.a_l_act=None
+                self.featured_map=None
+                # here we activate matrix featured_map
+                self.featured_map_act=None
 
-                self.grads_on_fraim_conv=None
+                self.grads_for_feature_map_layer=None
                 # hidden1 and hidden2 -  here we activate layer neurons row
                 self.hidden1=None
                
@@ -52,27 +52,30 @@ class CNN:
                 # We use it in fit function
                 self.truth_storage=[]
 
-                self.matr_to_backprop_conv=None
+                self.grads1_from_FCNN_as_matrix=None
                 
-                self.conv_params={'stride':2,'convolution':True,'center_w_l':(0,0)}
-                # this is fraim to move over input image
-                self.w_l=np.array([[-1,-1,-1],
+                self.conv_params={'stride':2,'convolution':True,'center_patch_for_conv':(0,0)}
+                # this is patch to move over input image
+                self.patch_for_conv=np.array([[-1,-1,-1],
                                    [-1,8,-1],
                                    [-1,-1,-1]])
-                # this are indexes for fraim to move over input image
-                self.indexes_a, self.indexes_b = self.create_indexes(size_axis=self.w_l.shape, center_w_l=self.conv_params['center_w_l'])
+                # this are indexes for patch to move over input image
+                self.indexes_a, self.indexes_b = self.create_indexes(size_axis=self.patch_for_conv.shape, center_patch_for_conv=self.conv_params['center_patch_for_conv'])
 
 
         def makeCircleAndSquaresImgData(self,dir_:str):
                 files=listdir(dir_)
-                byte_list:bytes=b''
+                
                
                 truth_relat:int=0 # index for one-hot encoding
                 for file_nam in files:
                         # get file name from pointed dir as file_nam
                         # read it content
+                        byte_list:bytes=b''
                         with open(dir_+file_nam,'rb') as f:
                                 byte_list=f.read()
+                        print('file name',file_nam)
+                        
                         im_single=[[]]
                         truth_single=[[0,0]]
                       
@@ -82,34 +85,34 @@ class CNN:
                        
                         for b in byte_list:
                              im_single[0].append(float(b/255.0))
-
+        
                         self.CircleAndSquaresData.append(im_single)
                         self.truth_storage.append(truth_single)
               
 
         def makeImageStorage(self):
             for input_image in self.CircleAndSquaresData:
-                self.image_storage.append(self.vector2matrix(input_image,(28,28))) # (784,1) -> (28,28)
+                self.image_storage.append(self.vector2matrix(input_image,(28,28))) # (1,784) -> (28,28)
 
-        def create_axis_indexes(self,size_axis:int,center_w_l:int)->list:
+        def create_axis_indexes(self,size_axis:int,center_patch_for_conv:int)->list:
                 coords=[]
-                for i in range(-center_w_l,size_axis-center_w_l):
+                for i in range(-center_patch_for_conv,size_axis-center_patch_for_conv):
                         coords.append(i)
                 return coords        
-        def create_indexes(self,size_axis:tuple,center_w_l:tuple)->tuple:
-                coords_a=self.create_axis_indexes(size_axis[0],center_w_l[0])
-                coords_b=self.create_axis_indexes(size_axis[1],center_w_l[0])
+        def create_indexes(self,size_axis:tuple,center_patch_for_conv:tuple)->tuple:
+                coords_a=self.create_axis_indexes(size_axis[0],center_patch_for_conv[0])
+                coords_b=self.create_axis_indexes(size_axis[1],center_patch_for_conv[0])
                 return (coords_a,coords_b)
 
         def make_convulat_or_corelat(self,matrix,#:matrix<R>
-                                     fraim,#:matrix<R>
-                                     coords_for_fraim:tuple,
-                                     S:int,# Stride for fraim
+                                     patch,#:matrix<R>
+                                     coords_for_patch:tuple,
+                                     S:int,# Stride for patch
                                      g_val_conv_or_corelat:int):#->matrix<R> matrix_res, we have got result after conv process
               
                 matrix_height:int=matrix.shape[0]
                 matrix_width:int=matrix.shape[1]
-                indexes_a,indexes_b=coords_for_fraim
+                indexes_a,indexes_b=coords_for_patch
 
               
                 matrix_res=np.zeros((1,1))
@@ -126,7 +129,7 @@ class CNN:
                                                 
                                                 if i*S - g_val_conv_or_corelat*a >= 0 and j*S - g_val_conv_or_corelat*b >= 0 \
                                                 and i*S - g_val_conv_or_corelat*a < matrix_height and j*S - g_val_conv_or_corelat*b < matrix_width:
-                                                        result += matrix[i*S - g_val_conv_or_corelat*a][j*S - g_val_conv_or_corelat*b] * fraim[indexes_a.index(a)][indexes_b.index(b)]
+                                                        result += matrix[i*S - g_val_conv_or_corelat*a][j*S - g_val_conv_or_corelat*b] * patch[indexes_a.index(a)][indexes_b.index(b)]
                                                      
                                                         element_exists = True
                                
@@ -145,10 +148,10 @@ class CNN:
                 return matrix_res              
         
 
-        def conv_feed_get_a_l(self,a_0,#:matrix<R>
-                              w_l,#:matrix<R>
+        def conv2d(self,input_img,#:matrix<R>
+                              patch_for_conv,#:matrix<R>
                               conv_params:dict,
-                              ): #->matrix<R> (a_l)
+                              ): #->matrix<R> (featured_map)
                 S = conv_params['stride']
                 
                 if conv_params['convolution']:
@@ -156,26 +159,33 @@ class CNN:
                 else:
                         g = -1 
 
-                return self.make_convulat_or_corelat(a_0,w_l,(self.indexes_a,self.indexes_b),S,g)        
+                return self.make_convulat_or_corelat(input_img,patch_for_conv,(self.indexes_a,self.indexes_b),S,g)        
                 
-        # activate a_l matrix (we have got it after conv process).This matrix called a_l_act                
-        def conv_feed_get_a_l_act(self,a_l,#:matrix<R>
-                      ):#->matrix<R> a_l_act
-                a_l_act=[]
+        # activate featured_map matrix (we have got it after conv process).This matrix called featured_map_act                
+        def conv2d_act(self,featured_map,#:matrix<R>
+                      ):#->matrix<R> featured_map_act
+                featured_map_act=[]
                
-                for row in a_l:
+                for row in featured_map:
                         row_tmp=[]
                         for elem in row:
                             row_tmp.append(self.relu(elem))    
-                        a_l_act.append(row_tmp)
-                return np.array(a_l_act)        
+                        featured_map_act.append(row_tmp)
+                return np.array(featured_map_act)
+        
+        def sigmoid(self,val:float)->float:
+
+                return 1/(1+np.exp(-val))
+
+        def derivate_sigmoid(self,val:float)->float:
+                return val*(1-val)
                 
-        def relu(self,val:float):
+        def relu(self,val:float)->float:
                 if val<0:
                     return 0
                 return val
 
-        def derivate_relu(self,val:float):
+        def derivate_relu(self,val:float)->float:
                 if val<0:
                         return 0.001
                 
@@ -197,7 +207,7 @@ class CNN:
                 i=0
                 for row in cost_activ:
                         for elem in row:
-                                cost_activ[i,0]=self.relu(elem)
+                                cost_activ[i,0]=self.sigmoid(elem)
                         i+=1        
 
                 return (cost,cost_activ)                
@@ -208,7 +218,7 @@ class CNN:
                 for row in e:
                         for elem in row:
                                
-                              gradients[i,0]= (targets[i,0]-elem)* self.derivate_relu(elem)
+                              gradients[i,0]= (targets[i,0]-elem)* self.derivate_sigmoid(elem)
                              
                                              
                         i+=1
@@ -219,7 +229,7 @@ class CNN:
                 i=0
                 for row in e_:
                         for elem in row:
-                                cost_gradients[0,i]=cost_gradients[0,i]*self.derivate_relu(elem)
+                                cost_gradients[0,i]=cost_gradients[0,i]*self.derivate_sigmoid(elem)
                         i+=1        
                
                 return cost_gradients
@@ -231,20 +241,19 @@ class CNN:
                               delta_matrix #:matrix<R>
                          ): #->matrix<R> new have updated
 
-                newMatr=np.zeros((matrix.shape[0],matrix.shape[1]))
-
                 newMatr=matrix+delta_matrix
 
                 return newMatr
 
               
-        def feedForward(self,a_0:np.ndarray)->np.ndarray:
-               self.a_l=self.conv_feed_get_a_l(a_0,self.w_l,self.conv_params)
+        def feedForward(self,input_img:np.ndarray)->np.ndarray:
+               self.featured_map=self.conv2d(input_img,self.patch_for_conv,self.conv_params)
              
-               self.a_l_act=self.conv_feed_get_a_l_act(self.a_l)
+               self.featured_map_act=self.conv2d_act(self.featured_map)
 
-               self.signals_conv=np.array([self.a_l_act.flatten()]).T
-             
+               self.signals_conv=np.array([self.featured_map_act.flatten()]).T
+
+                            
                self.e1,self.hidden1=self.makeHidden(self.signals_conv,self.firstFCNLayer)
                self.e2,self.hidden2=self.makeHidden(self.hidden1,self.secondFCNLayer)
                return self.hidden2
@@ -255,10 +264,11 @@ class CNN:
        
         def train(self,X:np.ndarray,Y:np.ndarray)->float:
 
-           cnn_out_res=self.feedForward(X)
+           wholeNN_out=self.feedForward(X)
+           print('cnn out res',wholeNN_out)
           
           
-           out_grads=self.calcOutGradientsFCN(cnn_out_res,Y)
+           out_grads=self.calcOutGradientsFCN(wholeNN_out,Y)
           
            grads2=self.calcHidGradientsFCN(self.secondFCNLayer,self.e2,out_grads)
            
@@ -268,14 +278,14 @@ class CNN:
          
            self.firstFCNLayer=self.updMatrixFCN(self.firstFCNLayer,grads1,self.signals_conv)
          
-           self.matr_to_backprop_conv=\
+           self.grads1_from_FCNN_as_matrix= \
            self.vector2matrix(grads1,(15,15))
          
-           self.grads_on_fraim_conv= \
-           self.make_convulat_or_corelat(self.matr_to_backprop_conv,self.w_l,(self.indexes_a,self.indexes_b),1,1)
+           self.grads_for_feature_map_layer= \
+           self.make_convulat_or_corelat(self.grads1_from_FCNN_as_matrix,self.patch_for_conv,(self.indexes_a,self.indexes_b),S=1,g_val_conv_or_corelat=1)
           
-           self.a_l=self.updMatrixCNN(self.a_l,self.grads_on_fraim_conv)
-           return self.mse(Y.T-cnn_out_res)
+           self.featured_map=self.updMatrixCNN(self.featured_map,self.grads_for_feature_map_layer)
+           return self.mse(Y.T-wholeNN_out)
 
         def fit(self,nEpochs:int,l_r:float)->None:
           
@@ -284,15 +294,17 @@ class CNN:
                 while(ep<nEpochs):
                    for i in range(20):
                         cur_img=np.array(self.image_storage[i])
+                       # print('cur img',cur_img)
+                        
                         cur_truth=np.array(self.truth_storage[i])
-               
+                      
                         show_mse:float=self.train(cur_img,cur_truth) 
                         if ep%10==0:
                                 print('--------------------')
                                 print("Error mse:",show_mse)
                                 print('--------------------')
                    ep+=1
-                print("grads on fraim conv shape",np.array(self.grads_on_fraim_conv).shape)
+               
                    
 
            

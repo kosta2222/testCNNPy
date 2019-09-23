@@ -162,3 +162,5 @@ code_demo_maxpool.py
 математика на пальцах
 python
 машинное обучение
+Good day!My name is Konstantin!I am from Russia Fed,Mordovia region.I want to build simple CNN in Python with backpropaganation.But I got some
+problems with backprop because minimal square error (mse) does not change.I attached image with schemas of layer and my quastion is do I make all right in my code(and schemas)?Especially with grads_on_fraim_conv matrix variable?My git project of this is https://github.com/kosta2222/testCNNPy/tree/asHabrCnn.Thank you!
