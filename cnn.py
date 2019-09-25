@@ -166,17 +166,23 @@ class CNN:
         def conv2d_act(self,featured_map,#:matrix<R>
                       ):#->matrix<R> featured_map_act
                 featured_map_act=[]
+
+                print('in c_a featured map',self.show_matrix_hash(featured_map))
                
                 for row in featured_map:
                         row_tmp=[]
+                        #featured_map_act.clear()
                         for elem in row:
                             row_tmp.append(self.relu(elem))    
                         featured_map_act.append(row_tmp)
+                
+                print('in c_a featured map act',self.show_matrix_hash(featured_map_act))
+                
                 return np.array(featured_map_act)
         
         def sigmoid(self,val:float)->float:
 
-                return 1/(1+np.exp(-val))
+                return (1/(1+np.exp(-val)))
 
         def derivate_sigmoid(self,val:float)->float:
                 return val*(1-val)
@@ -248,17 +254,20 @@ class CNN:
                 return newMatr
 
               
-        def feedForward(self,input_img:np.ndarray)->np.ndarray:
-               self.featured_map=self.conv2d(input_img,self.patch_for_conv,self.conv_params)
-               print('in f_F input img %s and patch %s',self.show_matrix_hash(input_img),self.show_matrix_hash(self.patch_for_conv))
+        def feedForward(self,input_img:np.ndarray,patch_for_conv)->np.ndarray:
+               self.featured_map=self.conv2d(input_img,patch_for_conv,self.conv_params)
+               print('in f_F input img %s and patch %s'%(self.show_matrix_hash(input_img),self.show_matrix_hash(self.patch_for_conv)))
              
                self.featured_map_act=self.conv2d_act(self.featured_map)
                print('in f_F feat map ',self.show_matrix_hash(self.featured_map))
                print('in f_F feat map act ',self.show_matrix_hash(self.featured_map_act))
                self.signals_from_CNN_to_FCNN=np.array([self.featured_map_act.flatten()]).T
-                            
+
+               print('in f_F flat',self.show_matrix_hash(self.signals_from_CNN_to_FCNN))
                self.e1,self.hidden1=self.makeHidden(self.signals_from_CNN_to_FCNN,self.firstFCNLayer)
+               print('in f_F hidden1',self.show_matrix_hash(self.hidden1))
                self.e2,self.hidden2=self.makeHidden(self.hidden1,self.secondFCNLayer)
+               print('in f_F hidden2',self.show_matrix_hash(self.hidden2))
                return self.hidden2
 
         def show_matrix_hash(self,matr)->str:
@@ -271,7 +280,7 @@ class CNN:
        
         def train(self,X:np.ndarray,Y:np.ndarray)->float:
 
-           wholeNN_out=self.feedForward(X)
+           wholeNN_out=self.feedForward(X,self.patch_for_conv)
            print('cnn out res',wholeNN_out)
           
            # Now we make backpropaganation!
@@ -293,8 +302,10 @@ class CNN:
            self.make_convulat_or_corelat(X,grads_from_FCNN_as_matrix,self.create_indeces_for_patch(grads_from_FCNN_as_matrix.shape,(0,0)),S=10,g_val_conv_or_corelat=-1)
            
            # Update paches(kernels) matrix data!
-           self.patch_for_conv= self.updMatrixCNN(self.patch_for_conv,grads_for_kernel)
-          
+          # self.patch_for_conv= self.updMatrixCNN(self.patch_for_conv,grads_for_kernel)
+           self.patch_for_conv=self.patch_for_conv+grads_for_kernel
+           print('in f_F grads for kernel',self.show_matrix_hash(grads_for_kernel))
+           print('in f_F patch for conv down',self.show_matrix_hash(self.patch_for_conv))
            
            return self.mse(Y.T-wholeNN_out)
 
@@ -309,10 +320,10 @@ class CNN:
                         cur_truth=np.array(self.truth_storage[i])
                       
                         show_mse:float=self.train(cur_img,cur_truth) 
-                        if ep%10==0:
-                                print('--------------------')
-                                print("Error mse:",show_mse)
-                                print('--------------------')
+                        #if ep%1==0:
+                        print('--------------------')
+                        print("Error mse:",show_mse)
+                        print('--------------------')
                    ep+=1
                
                 
