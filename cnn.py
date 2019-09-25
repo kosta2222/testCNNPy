@@ -2,6 +2,8 @@ import numpy as np
 import traceback as t
 import sys
 
+import hashlib as hsh
+
 from os import listdir
 """
 In program we try to learn our Conv Neuro Net(CNN)
@@ -12,10 +14,17 @@ circle_1_0.ari,square_10_1.ari
 The last number is the class of figure
  
 Denote.
-input_img - is singe matrix where we write input image to convulate it with...
+input_img - is a matrix where we write input image to convulate it with...
 patch_for_conv - matrix and to get result as...
 featured_map - matrix, which we activate with relu function and get
 featured_map_act - matrix. 
+
+CNN - Convolutional neuro net
+FCNN -Full connected neuro net
+
+pach - is filter or kernel, it is the fraim moving over input image
+
+a and b are the indeces for pach when it moves over the image when we conv
 """
 
 class CNN:
@@ -38,7 +47,7 @@ class CNN:
                 self.hidden2=None
                 
                 # sygnals from CNN to FCNN
-                self.signals_conv=None
+                self.signals_from_CNN_to_FCNN=None
 
                 # learning rate
                 self.l_r=0.07
@@ -51,8 +60,6 @@ class CNN:
                 # in general it will be 3-d array (20,1,2)
                 # We use it in fit function
                 self.truth_storage=[]
-
-                self.grads1_from_FCNN_as_matrix=None
                 
                 self.conv_params={'stride':2,'convolution':True,'center_patch_for_conv':(0,0)}
                 # this is patch to move over input image
@@ -60,12 +67,11 @@ class CNN:
                                    [-1,8,-1],
                                    [-1,-1,-1]])
                 # this are indexes for patch to move over input image
-                self.indexes_a, self.indexes_b = self.create_indexes(size_axis=self.patch_for_conv.shape, center_patch_for_conv=self.conv_params['center_patch_for_conv'])
+                self.indexes_a, self.indexes_b = self.create_indeces_for_patch(size_axis=self.patch_for_conv.shape, center_patch_for_conv=self.conv_params['center_patch_for_conv'])
 
 
         def makeCircleAndSquaresImgData(self,dir_:str):
-                files=listdir(dir_)
-                
+                files=listdir(dir_)                
                
                 truth_relat:int=0 # index for one-hot encoding
                 for file_nam in files:
@@ -74,8 +80,7 @@ class CNN:
                         byte_list:bytes=b''
                         with open(dir_+file_nam,'rb') as f:
                                 byte_list=f.read()
-                        print('file name',file_nam)
-                        
+                                               
                         im_single=[[]]
                         truth_single=[[0,0]]
                       
@@ -94,14 +99,14 @@ class CNN:
             for input_image in self.CircleAndSquaresData:
                 self.image_storage.append(self.vector2matrix(input_image,(28,28))) # (1,784) -> (28,28)
 
-        def create_axis_indexes(self,size_axis:int,center_patch_for_conv:int)->list:
+        def create_axis_indexes_for_patch(self,size_axis:int,center_patch_for_conv:int)->list:
                 coords=[]
                 for i in range(-center_patch_for_conv,size_axis-center_patch_for_conv):
                         coords.append(i)
                 return coords        
-        def create_indexes(self,size_axis:tuple,center_patch_for_conv:tuple)->tuple:
-                coords_a=self.create_axis_indexes(size_axis[0],center_patch_for_conv[0])
-                coords_b=self.create_axis_indexes(size_axis[1],center_patch_for_conv[0])
+        def create_indeces_for_patch(self,size_axis:tuple,center_patch_for_conv:tuple)->tuple:
+                coords_a=self.create_axis_indexes_for_patch(size_axis[0],center_patch_for_conv[0])
+                coords_b=self.create_axis_indexes_for_patch(size_axis[1],center_patch_for_conv[0])
                 return (coords_a,coords_b)
 
         def make_convulat_or_corelat(self,matrix,#:matrix<R>
@@ -112,14 +117,11 @@ class CNN:
               
                 matrix_height:int=matrix.shape[0]
                 matrix_width:int=matrix.shape[1]
-                indexes_a,indexes_b=coords_for_patch
-
-              
+                indexes_a,indexes_b=coords_for_patch            
                 matrix_res=np.zeros((1,1))
-
                 matrix_res_height=matrix_res.shape[0]
                 matrix_res_width=matrix_res.shape[1]
-                
+               
                 for i in range(matrix_height):
                         for j in range(matrix_width):
                                 result = 0
@@ -129,20 +131,19 @@ class CNN:
                                                 
                                                 if i*S - g_val_conv_or_corelat*a >= 0 and j*S - g_val_conv_or_corelat*b >= 0 \
                                                 and i*S - g_val_conv_or_corelat*a < matrix_height and j*S - g_val_conv_or_corelat*b < matrix_width:
-                                                        result += matrix[i*S - g_val_conv_or_corelat*a][j*S - g_val_conv_or_corelat*b] * patch[indexes_a.index(a)][indexes_b.index(b)]
-                                                     
+                                                        result += matrix[i*S - g_val_conv_or_corelat*a][j*S - g_val_conv_or_corelat*b] * patch[indexes_a.index(a)][indexes_b.index(b)]                                                     
                                                         element_exists = True
-                               
-                                if element_exists:
-                                        if i >= matrix_res_height:
+
+                                                        if element_exists:
+                                                           if i >= matrix_res_height:
                                                 
-                                                matrix_res = np.vstack((matrix_res, np.zeros(matrix_res_width)))
-                                        if j >= matrix_res_width:
+                                                                matrix_res = np.vstack((matrix_res, np.zeros(matrix_res_width)))
+                                                           if j >= matrix_res_width:
                                                 
-                                                matrix_res = np.hstack((matrix_res, np.zeros((matrix_res_height,1))))
-                                        matrix_res[i][j] = result
-                                        matrix_res_height=matrix_res.shape[0]
-                                        matrix_res_width=matrix_res.shape[1]
+                                                                matrix_res = np.hstack((matrix_res, np.zeros((matrix_res_height,1))))
+                                                           matrix_res[i][j] = result
+                                                           matrix_res_height=matrix_res.shape[0]
+                                                           matrix_res_width=matrix_res.shape[1]
                                         
                                         
                 return matrix_res              
@@ -238,7 +239,8 @@ class CNN:
              return layerNew
 
         def updMatrixCNN(self,matrix,#:matrix<R>
-                              delta_matrix #:matrix<R>
+
+                         delta_matrix #:matrix<R>
                          ): #->matrix<R> new have updated
 
                 newMatr=matrix+delta_matrix
@@ -248,16 +250,21 @@ class CNN:
               
         def feedForward(self,input_img:np.ndarray)->np.ndarray:
                self.featured_map=self.conv2d(input_img,self.patch_for_conv,self.conv_params)
+               print('in f_F input img %s and patch %s',self.show_matrix_hash(input_img),self.show_matrix_hash(self.patch_for_conv))
              
                self.featured_map_act=self.conv2d_act(self.featured_map)
-
-               self.signals_conv=np.array([self.featured_map_act.flatten()]).T
-
+               print('in f_F feat map ',self.show_matrix_hash(self.featured_map))
+               print('in f_F feat map act ',self.show_matrix_hash(self.featured_map_act))
+               self.signals_from_CNN_to_FCNN=np.array([self.featured_map_act.flatten()]).T
                             
-               self.e1,self.hidden1=self.makeHidden(self.signals_conv,self.firstFCNLayer)
+               self.e1,self.hidden1=self.makeHidden(self.signals_from_CNN_to_FCNN,self.firstFCNLayer)
                self.e2,self.hidden2=self.makeHidden(self.hidden1,self.secondFCNLayer)
                return self.hidden2
-                  
+
+        def show_matrix_hash(self,matr)->str:
+                hash_obj=hsh.sha256()
+                hash_obj.update(str(matr).encode('ascii'))
+                return hash_obj.hexdigest()
        
         def mse(self,vec:np.ndarray)->float:
                 return np.square(vec).mean(axis=0)
@@ -267,24 +274,28 @@ class CNN:
            wholeNN_out=self.feedForward(X)
            print('cnn out res',wholeNN_out)
           
-          
+           # Now we make backpropaganation!
            out_grads=self.calcOutGradientsFCN(wholeNN_out,Y)
           
            grads2=self.calcHidGradientsFCN(self.secondFCNLayer,self.e2,out_grads)
            
          
-           self.secondFCNLayer=self.updMatrixFCN(self.secondFCNLayer,grads2,self.hidden1)
+           #self.secondFCNLayer=self.updMatrixFCN(self.secondFCNLayer,grads2,self.hidden1)
            grads1=self.calcHidGradientsFCN(self.firstFCNLayer,self.e1,grads2)
          
-           self.firstFCNLayer=self.updMatrixFCN(self.firstFCNLayer,grads1,self.signals_conv)
-         
-           self.grads1_from_FCNN_as_matrix= \
+           #self.firstFCNLayer=self.updMatrixFCN(self.firstFCNLayer,grads1,self.signals_from_CNN_to_FCNN)
+           
+           grads_from_FCNN_as_matrix= \
            self.vector2matrix(grads1,(15,15))
-         
-           self.grads_for_feature_map_layer= \
-           self.make_convulat_or_corelat(self.grads1_from_FCNN_as_matrix,self.patch_for_conv,(self.indexes_a,self.indexes_b),S=1,g_val_conv_or_corelat=1)
+           # Some important steps of backpropaganation of conv are skipped
           
-           self.featured_map=self.updMatrixCNN(self.featured_map,self.grads_for_feature_map_layer)
+           grads_for_kernel= \
+           self.make_convulat_or_corelat(X,grads_from_FCNN_as_matrix,self.create_indeces_for_patch(grads_from_FCNN_as_matrix.shape,(0,0)),S=10,g_val_conv_or_corelat=-1)
+           
+           # Update paches(kernels) matrix data!
+           self.patch_for_conv= self.updMatrixCNN(self.patch_for_conv,grads_for_kernel)
+          
+           
            return self.mse(Y.T-wholeNN_out)
 
         def fit(self,nEpochs:int,l_r:float)->None:
@@ -294,8 +305,7 @@ class CNN:
                 while(ep<nEpochs):
                    for i in range(20):
                         cur_img=np.array(self.image_storage[i])
-                       # print('cur img',cur_img)
-                        
+                                              
                         cur_truth=np.array(self.truth_storage[i])
                       
                         show_mse:float=self.train(cur_img,cur_truth) 
@@ -305,7 +315,7 @@ class CNN:
                                 print('--------------------')
                    ep+=1
                
-                   
+                
 
            
            
