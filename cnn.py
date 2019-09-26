@@ -26,9 +26,6 @@ pach - is filter or kernel, it is the fraim moving over input image
 
 a and b are the indeces for pach when it moves over the image when we conv
 """
-def sigmoid(val:float)->float:
-
-        return (1/(1+np.exp(-val)))
 class CNN:
         def __init__(self):              
                 self.firstFCNLayer=self.makeLayer(3,225)
@@ -165,25 +162,12 @@ class CNN:
         # activate featured_map matrix (we have got it after conv process).This matrix called featured_map_act                
         def conv2d_act(self,featured_map,#:matrix<R>
                       ):#->matrix<R> featured_map_act
-                """
-                featured_map_act=np.zeros((featured_map.shape[0],featured_map.shape[1]))
+                return self.sigmoid(featured_map)
 
-                print('in c_a featured map',self.show_matrix_hash(featured_map))
-              
-                for row in featured_map:
-                        i=j=0
-                        for elem in row:
-                            featured_map_act[i][j]=self.relu(elem)    
-                            j+=1
-                        i+=1
-                       
-                
-                print('in c_a featured map act',self.show_matrix_hash(featured_map_act))
-                
-                return featured_map_act
-                """
-                return sigmoid(featured_map)
-                
+        def sigmoid(self,val:np.ndarray)->np.ndarray:
+
+              return (1/(1+np.exp(-val)))
+
 
         def derivate_sigmoid(self,val:float)->float:
                 return val*(1-val)
@@ -209,52 +193,21 @@ class CNN:
                 return np.random.normal(0.0,2**-0.5,(In,Out))
         
         def makeHidden(self,signals:np.ndarray,weights:np.ndarray)->(np.ndarray,np.ndarray):
-                print('in m_H signals %s weights %s'%(self.show_matrix_hash(signals,weights)[0],self.show_matrix_hash(signals,weights)[1]))
+               
                 cost=np.dot(weights,signals)
-                print('in m_H cost',self.show_matrix_hash(cost))
-                """
-                cost_activ=np.zeros((cost.shape[0],cost.shape[1]))
-
-                i=0
-                for row in cost:
-                        for elem in row:
-                                cost_activ[i,0]=sigmoid(elem)
-                        i+=1        
-
-                return (cost,cost_activ)
-                """
-                return (cost,sigmoid(cost))
+               
+                return (cost,self.sigmoid(cost))
+               
         def calcOutGradientsFCN(self,e:np.ndarray,_targets:np.ndarray)->np.ndarray:
-                """
-                gradients=np.zeros((e.shape[0],1))
-                i=0
-                targets=_targets.T
-                for row in e:
-                        for elem in row:
-                               
-                              gradients[i,0]= (targets[i,0]-elem)* self.derivate_sigmoid(elem)
-                             
-                                             
-                        i+=1
-                return gradients.T
-                """
-                print("in c_o_G grads",((_targets - e)*self.derivate_sigmoid(e)).T.shape)
                 return ((_targets.T - e)*self.derivate_sigmoid(e)).T
         def calcHidGradientsFCN(self,layer:np.ndarray,e_:np.ndarray,gradients:np.ndarray)->np.ndarray:
-                #cur_gradients=np.zeros((1,layer.shape[1]))
+               
                 
                 cost_gradients=np.dot(gradients,layer)
-                """
-                i=0
-                for row in e_:
-                        for elem in row:
-                                cost_gradients[0,i]=cost_gradients[0,i]*self.derivate_sigmoid(elem)
-                        i+=1        
+                                      
                
                 return cost_gradients
-                """
-                print("in c_H_G cost grads",np.shape(cost_gradients))
-                return cost_gradients
+               
         def updMatrixFCN(self,layer:np.ndarray,gradients:np.ndarray,enteredVal:np.ndarray)->np.ndarray:
              layerNew=layer+self.l_r*gradients*enteredVal.T
              return layerNew
@@ -271,20 +224,20 @@ class CNN:
               
         def feedForward(self,input_img:np.ndarray,patch_for_conv)->np.ndarray:
                self.featured_map=self.conv2d(input_img,patch_for_conv,self.conv_params)
-               print('in f_F input img %s and patch %s'%(self.show_matrix_hash(input_img),self.show_matrix_hash(self.patch_for_conv)))
+              
              
                self.featured_map_act=self.conv2d_act(self.featured_map)
-               print('in f_F feat map ',self.show_matrix_hash(self.featured_map))
-               print('in f_F feat map act ',self.show_matrix_hash(self.featured_map_act))
+              
                signals_from_CNN_to_FCNN=np.array([self.featured_map_act.flatten()]).T
 
-               print('in f_F flat',self.show_matrix_hash(signals_from_CNN_to_FCNN))
+              
                self.e1,hidden1=self.makeHidden(signals_from_CNN_to_FCNN,self.firstFCNLayer)
-               print('in f_F hidden1',self.show_matrix_hash(self.hidden1))
+              
                self.e2,hidden2=self.makeHidden(hidden1,self.secondFCNLayer)
-               print('in f_F hidden2',self.show_matrix_hash(self.hidden2))
+              
+              
                return hidden2
-
+        # for debug
         def show_matrix_hash(self,*matr)->str:
                 hash_obj=hsh.sha256()
                 matr_list=['']*len(matr)
@@ -302,8 +255,7 @@ class CNN:
         def train(self,X:np.ndarray,Y:np.ndarray)->float:
 
            wholeNN_out=self.feedForward(X,self.patch_for_conv)
-           print('cnn out res',wholeNN_out)
-        
+                  
            # Now we make backpropaganation!
            out_grads=self.calcOutGradientsFCN(wholeNN_out,Y)
           
@@ -325,9 +277,7 @@ class CNN:
            # Update paches(kernels) matrix data!
            # self.patch_for_conv= self.updMatrixCNN(self.patch_for_conv,grads_for_kernel)
            self.patch_for_conv=self.patch_for_conv+grads_for_kernel
-           print('in f_F grads for kernel',self.show_matrix_hash(grads_for_kernel))
-           print('in f_F patch for conv down',self.show_matrix_hash(self.patch_for_conv))
-           
+                    
            return self.mse(Y.T-wholeNN_out)
            
         def fit(self,nEpochs:int,l_r:float)->None:
@@ -341,10 +291,10 @@ class CNN:
                         cur_truth=np.array(self.truth_storage[i])
                       
                         show_mse:float=self.train(cur_img,cur_truth) 
-                        #if ep%1==0:
-                        print('--------------------')
-                        print("Error mse:",show_mse)
-                        print('--------------------')
+                        if ep%1==0:
+                                print('--------------------')
+                                print("Error mse:",show_mse)
+                                print('--------------------')
                    ep+=1
                
                 
